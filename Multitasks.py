@@ -1,6 +1,7 @@
 import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import time
+import pandas as pd
 from urllib.request import urlopen
 
 # https://python-parallel-programmning-cookbook.readthedocs.io/zh_CN/latest/chapter4/02_Using_the_concurrent.futures_Python_modules.html
@@ -44,27 +45,63 @@ N = 16
 URL = 'http://scholar.princeton.edu/sites/default/files/oversize_pdf_test_0.pdf'
 urls = [URL for i in range(N)]
 
-if __name__ == "__main__":
-        # 顺序执行
-        start_time = time.time()
-        for item in number_list:
-                print(evaluate_item(item))
-        print("Sequential execution in " + str(time.time() - start_time), "seconds")
-        # 线程池执行
-        start_time_1 = time.time()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                futures = [executor.submit(evaluate_item, item) for item in number_list]
-                for future in concurrent.futures.as_completed(futures):
-                        print(future.result())
-        print ("Thread pool execution in " + str(time.time() - start_time_1), "seconds")
-        # 进程池
-        start_time_2 = time.time()
-        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
-                futures = [executor.submit(evaluate_item, item) for item in number_list]
-                for future in concurrent.futures.as_completed(futures):
-                        print(future.result())
-        print ("Process pool execution in " + str(time.time() - start_time_2), "seconds")
+# ================================================================
+test = pd.DataFrame({
+    "a": [1, 2, 3],
+    "b": [-1, -2, -3]
+})
 
-        # ================================================================
-        res = multithreading(download, urls, 1)
-        print(res)
+def process_df(test, n):
+    cnt = 0
+    for i in range(10000000):
+        cnt += 1
+    return test * cnt * n
+
+def multi_process_df(args):
+    return process_df(args[0], args[1])
+
+def multiprocessing_df(func, args, workers):
+    begin_time = time.time()
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        res = executor.map(func, args)
+        print("multi res", res)
+        # print("multi res list", list(res))
+        # print("multi res concat", pd.concat(res))
+    return res
+
+
+if __name__ == "__main__":
+    # 顺序执行
+    start_time = time.time()
+    for item in number_list:
+        print(evaluate_item(item))
+    print("Sequential execution in " + str(time.time() - start_time), "seconds")
+    # 线程池执行
+    start_time_1 = time.time()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(evaluate_item, item) for item in number_list]
+        for future in concurrent.futures.as_completed(futures):
+                print(future.result())
+    print("Thread pool execution in " + str(time.time() - start_time_1), "seconds")
+    # 进程池
+    start_time_2 = time.time()
+    with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(evaluate_item, item) for item in number_list]
+        for future in concurrent.futures.as_completed(futures):
+                print(future.result())
+    print ("Process pool execution in " + str(time.time() - start_time_2), "seconds")
+    print("*******************************")
+
+    res = multithreading(download, urls, 1)
+    print(res)
+    print("*******************************")
+
+    start_time = time.time()
+    args = [(test, i) for i in range(8)]
+    res = multiprocessing_df(multi_process_df, args, 4)
+    print("res next:", next(res))
+    print(time.time() - start_time)
+
+
+
+
